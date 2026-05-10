@@ -364,6 +364,7 @@
                     <button class="btn btn-sm btn-outline vocab-filter" data-cat="highfreq" style="color:#1976D2;border-color:#1976D2;">高频</button>
                     <button class="btn btn-sm btn-outline vocab-filter" data-cat="errorprone" style="color:#E65100;border-color:#E65100;">易错</button>
                     <button class="btn btn-sm btn-outline vocab-filter" data-cat="basic">基础</button>
+                    <button class="btn btn-sm btn-outline vocab-filter" data-cat="phrase" style="color:#7C3AED;border-color:#7C3AED;">词组</button>
                 </div>
             </div>
             <div class="card">
@@ -3236,7 +3237,9 @@
             var query = (vocabSearch.value || '').trim().toLowerCase();
             var filtered = WORDS;
             // 分类筛选
-            if (vocabCatFilter !== 'all') {
+            if (vocabCatFilter === 'phrase') {
+                filtered = filtered.filter(function(w) { return w.word.indexOf(' ') !== -1; });
+            } else if (vocabCatFilter !== 'all') {
                 filtered = filtered.filter(function(w) {
                     return getWordCategory(w).code === vocabCatFilter;
                 });
@@ -3255,12 +3258,13 @@
             var html = '';
             filtered.forEach(function(w) {
                 var s = progress[w.id];
-                var cat = getWordCategory(w);
+                var isPhrase = w.word.indexOf(' ') !== -1;
+                var cat = isPhrase ? { num: 4, name: '词组' } : getWordCategory(w);
                 var ebHtml = '';
                 if (s && s.ebLevel >= 1) {
                     ebHtml = '<span style="font-size:10px;color:' + EB_COLORS[s.ebLevel] + ';margin-left:4px;">L' + s.ebLevel + '</span>';
                 }
-                html += '<div class="vocab-item"><div class="vocab-item-left"><div class="vocab-word-row"><span class="vocab-word">' + w.word + '</span> <span style="cursor:pointer;font-size:16px;line-height:1;" onclick="event.stopPropagation();window._speak(\'' + w.word + '\')">&#128266;</span>' + ebHtml + ' <span class="vocab-status" style="background:' + (cat.num === 1 ? '#FFEBEE' : cat.num === 2 ? '#FFF3E0' : cat.num === 3 ? '#E3F2FD' : '#F5F5F5') + ';color:' + (cat.num === 1 ? '#C62828' : cat.num === 2 ? '#E65100' : cat.num === 3 ? '#1565C0' : '#757575') + ';">' + cat.name + '</span></div><div class="vocab-meaning">' + w.meaning + '</div></div></div>';
+                html += '<div class="vocab-item"><div class="vocab-item-left"><div class="vocab-word-row"><span class="vocab-word">' + w.word + '</span> <span style="cursor:pointer;font-size:16px;line-height:1;" onclick="event.stopPropagation();window._speak(\'' + w.word + '\')">&#128266;</span>' + ebHtml + ' <span class="vocab-status" style="background:' + (cat.num === 1 ? '#FFEBEE' : cat.num === 2 ? '#FFF3E0' : cat.num === 3 ? '#E3F2FD' : cat.num === 4 ? '#F3E8FF' : '#F5F5F5') + ';color:' + (cat.num === 1 ? '#C62828' : cat.num === 2 ? '#E65100' : cat.num === 3 ? '#1565C0' : cat.num === 4 ? '#7C3AED' : '#757575') + ';">' + cat.name + '</span></div><div class="vocab-meaning">' + w.meaning + '</div></div></div>';
             });
 
             if (filtered.length === 0) {
