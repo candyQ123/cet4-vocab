@@ -1516,8 +1516,10 @@
         var quizIndex = -1;       // 当前题目位置
 
         function initQuiz() {
-            var needIds = Storage.getReviewableIds();
-            if (needIds.length === 0) {
+            var dueIds = Storage.getDueReviewIds();
+            var todayIds = Storage.getReviewableIds();
+            var allIds = dueIds.concat(todayIds.filter(function(id) { return dueIds.indexOf(id) === -1; }));
+            if (allIds.length === 0) {
                 quizCard.style.display = 'none';
                 quizStats.style.display = 'none';
                 quizEmpty.style.display = 'block';
@@ -1594,9 +1596,11 @@
                 Storage.set('cet4_quiz_state', null);
             } else {
                 // 追加未答新题
-                var needIds = Storage.getReviewableIds();
+                var dueIds = Storage.getDueReviewIds();
+                var todayIds = Storage.getReviewableIds();
+                var allNeedIds = dueIds.concat(todayIds.filter(function(id) { return dueIds.indexOf(id) === -1; }));
                 var answeredIds = quizQuestions.map(function(q) { return q.word.id; });
-                var needWords = WORDS.filter(function(w) { return needIds.indexOf(w.id) !== -1 && answeredIds.indexOf(w.id) === -1; });
+                var needWords = WORDS.filter(function(w) { return allNeedIds.indexOf(w.id) !== -1 && answeredIds.indexOf(w.id) === -1; });
                 if (needWords.length === 0) {
                     quizFeedback.textContent = '';
                     quizOptions.innerHTML = '';
