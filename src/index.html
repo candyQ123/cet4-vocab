@@ -10,9 +10,11 @@
     <link rel="manifest" href="manifest.json">
     <title>四级背单词</title>
     <script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
-    }
+    try {
+        if ('serviceWorker' in navigator && location.protocol === 'https:') {
+            navigator.serviceWorker.register('sw.js').catch(function(){});
+        }
+    } catch(e) {}
     </script>
     <style>
         /* ===== 基础重置 ===== */
@@ -304,6 +306,26 @@
     </main>
 
     <script>
+    // ===== 兼容补丁（旧手机浏览器） =====
+    if (!Array.prototype.find) {
+        Array.prototype.find = function(cb) {
+            for (var i = 0; i < this.length; i++) { if (cb(this[i], i, this)) return this[i]; }
+        };
+    }
+    if (!Array.prototype.some) {
+        Array.prototype.some = function(cb) {
+            for (var i = 0; i < this.length; i++) { if (cb(this[i], i, this)) return true; }
+            return false;
+        };
+    }
+    if (!String.prototype.includes) {
+        String.prototype.includes = function(s) { return this.indexOf(s) !== -1; };
+    }
+    if (!Array.prototype.includes) {
+        Array.prototype.includes = function(v) { return this.indexOf(v) !== -1; };
+    }
+    if (!window.speechSynthesis) { window.speechSynthesis = null; }
+
     // ===================================================================
     // 四级词库数据
     // ===================================================================
