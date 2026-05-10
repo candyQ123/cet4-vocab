@@ -3378,13 +3378,19 @@
             reader.readAsText(file);
             this.value = '';
         });
-        // 同步码导出
+        // 同步码导出（精简版：只导进度数据）
         document.getElementById('btnSyncExport').addEventListener('click', function() {
-            var data = Storage.exportAll();
+            var data = {
+                p: Storage.getWordsProgress(),
+                d: Storage.getDailyStats(),
+                b: Storage.getBookmarked(),
+                c: Storage.getCustomWords(),
+                s: Storage.getSettings()
+            };
             var json = JSON.stringify(data);
             var code = btoa(unescape(encodeURIComponent(json)));
             document.getElementById('syncCodeInput').value = code;
-            showToast('同步码已生成！复制发给另一台设备');
+            showToast('同步码已生成，长度：' + code.length + ' 字符');
         });
         // 同步码导入
         document.getElementById('btnSyncImport').addEventListener('click', function() {
