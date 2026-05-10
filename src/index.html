@@ -1354,6 +1354,7 @@
             }
             // 也加入今日记录（但不计入进度数字）
             Storage.incTodayLearned(currentWord.id, false);
+            Storage.set('cet4_quiz_done', null);
             updateProgress();
             showNextOrComplete();
         });
@@ -1366,6 +1367,7 @@
                 ebLevel: 1, nextReviewDate: Storage.getEbbinghausNextDate(1)
             });
             Storage.incTodayLearned(currentWord.id, true);
+            Storage.set('cet4_quiz_done', null); // 学了新词，复习可刷新
             updateProgress();
             showNextOrComplete();
         });
@@ -1519,6 +1521,25 @@
             var dueIds = Storage.getDueReviewIds();
             var todayIds = Storage.getReviewableIds();
             var allIds = dueIds.concat(todayIds.filter(function(id) { return dueIds.indexOf(id) === -1; }));
+            // 检查是否已完成且无新词
+            var done = Storage.get('cet4_quiz_done', null);
+            if (done && done.date === new Date().toISOString().slice(0, 10)) {
+                var doneIds = done.wordIds || [];
+                var newWordIds = allIds.filter(function(id) { return doneIds.indexOf(id) === -1; });
+                if (newWordIds.length === 0) {
+                    // 无新词，直接显示完成
+                    quizCard.style.display = 'block';
+                    quizStats.style.display = 'none';
+                    quizEmpty.style.display = 'none';
+                    quizWord.textContent = '';
+                    quizOptions.innerHTML = '';
+                    quizNavBtns.style.display = 'none';
+                    document.getElementById('quizFeedback').innerHTML = '<div style="padding:20px;color:#4CAF50;font-size:18px;">&#127881; 今天的词复习完毕！</div>';
+                    return;
+                }
+                // 有新词，清除旧完成状态重新来
+                Storage.set('cet4_quiz_done', null);
+            }
             if (allIds.length === 0) {
                 quizCard.style.display = 'none';
                 quizStats.style.display = 'none';
@@ -1598,7 +1619,8 @@
                     completeHtml += '<button class="btn btn-danger btn-block" id="btnRetryWrong" style="margin-top:10px;">错题重练 (' + wrongQs.length + ')</button>';
                 }
                 document.getElementById('quizFeedback').innerHTML = completeHtml;
-                Storage.set('cet4_quiz_state', null);
+                // 保存已完成状态，刷新不重置
+                Storage.set('cet4_quiz_done', { date: new Date().toISOString().slice(0, 10), wordIds: quizQuestions.map(function(q) { return q.word.id; }) });
                 // 错题重练按钮
                 var retryBtn = document.getElementById('btnRetryWrong');
                 if (retryBtn) {
