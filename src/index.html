@@ -1567,8 +1567,19 @@
                     }
                     return;
                 }
-                // 有新词，清除旧完成状态重新来
+                // 有新词，只复习新词
+                var doneWordIds = done.wordIds || [];
                 Storage.set('cet4_quiz_done', null);
+                Storage.set('cet4_quiz_state', null);
+                quizState = { correctCount: 0, totalCount: 0, currentQuestion: null, answered: false };
+                buildQuestionPool(doneWordIds);
+                quizIndex = -1;
+                quizStats.style.display = 'flex';
+                updateQuizStats();
+                quizEmpty.style.display = 'none';
+                quizCard.style.display = 'block';
+                goNextQuestion();
+                return;
             }
             if (allIds.length === 0) {
                 quizCard.style.display = 'none';
@@ -1601,26 +1612,28 @@
                 quizIndex = saved.quizIndex >= 0 ? saved.quizIndex : 0;
                 renderQuizQuestion();
             } else {
-                buildQuestionPool();
+                buildQuestionPool([]);
                 quizIndex = -1;
                 goNextQuestion();
             }
             updateQuizStats();
         }
 
-        function buildQuestionPool() {
+        function buildQuestionPool(excludeIds) {
+            // 按今天学习顺序排列
+            var todayIds = Storage.getTodayLearnedIds();
             var dueIds = Storage.getDueReviewIds();
-            var reviewIds = Storage.getReviewableIds();
-            // 到期词优先，然后其他可复习词
-            var allIds = dueIds.concat(reviewIds.filter(function(id) { return dueIds.indexOf(id) === -1; }));
-            var needWords = [];
-            allIds.forEach(function(id) {
-                var w = WORDS.find(function(x) { return x.id === id; });
-                if (w && needWords.indexOf(w) === -1) needWords.push(w);
-            });
+            // 合并：今天学的 + 到期词，去重，保持学习顺序
+            var allIds = todayIds.slice();
+            dueIds.forEach(function(id) { if (allIds.indexOf(id) === -1) allIds.push(id); });
+            // 排除已完成的词
+            if (excludeIds && excludeIds.length > 0) {
+                allIds = allIds.filter(function(id) { return excludeIds.indexOf(id) === -1; });
+            }
             quizQuestions = [];
-            for (var i = 0; i < needWords.length; i++) {
-                var word = needWords[i];
+            for (var i = 0; i < allIds.length; i++) {
+                var word = WORDS.find(function(w) { return w.id === allIds[i]; });
+                if (!word) continue;
                 var others = WORDS.filter(function(w) { return w.id !== word.id; });
                 shuffle(others);
                 quizQuestions.push({ word: word, distractors: others.slice(0, 3) });
