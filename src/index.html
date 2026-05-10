@@ -2115,7 +2115,10 @@
         document.getElementById('btnResetReview').addEventListener('click', function() {
             Storage.set('cet4_quiz_state', null);
             Storage.set('cet4_quiz_done', null);
-            closeSettings();
+            quizState = { correctCount: 0, totalCount: 0, currentQuestion: null, answered: false };
+            quizQuestions = [];
+            quizIndex = -1;
+            settingsModal.style.display = 'none';
             showToast('今日复习已重置');
         });
         document.getElementById('btnReset').addEventListener('click', function() {
