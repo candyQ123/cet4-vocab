@@ -144,7 +144,7 @@
         <div class="nav-title">English Learning</div>
         <div class="nav-tabs">
             <button class="nav-tab active" data-tab="learn">学习</button>
-            <button class="nav-tab" data-tab="review">复习<span id="reviewBadge" style="display:none;background:#F44336;color:#fff;font-size:11px;padding:1px 6px;border-radius:10px;margin-left:4px;vertical-align:top;"></span></button>
+            <button class="nav-tab" data-tab="review">复习</button>
             <button class="nav-tab" data-tab="wordbook">生词本</button>
             <button class="nav-tab" data-tab="grammar">语法</button>
             <button class="nav-tab" data-tab="vocab">词库</button>
@@ -2096,19 +2096,7 @@
         }
 
         // -- 初始化 --
-        function updateReviewBadge() {
-            var due = Storage.getDueReviewIds();
-            var badge = document.getElementById('reviewBadge');
-            if (due.length > 0) {
-                badge.textContent = due.length;
-                badge.style.display = 'inline';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-
         function init() {
-            updateReviewBadge();
             switchTab('learn');
             var word = getNextWord();
             if (word) {
