@@ -1527,8 +1527,15 @@
             quizStats.style.display = 'flex';
             quizEmpty.style.display = 'none';
 
-            // 尝试恢复上次复习进度（刷新不丢失）
+            // 尝试恢复上次复习进度，过滤掉今天已答过的
             var saved = Storage.get('cet4_quiz_state', null);
+            if (saved && saved.questions && saved.questions.length > 0) {
+                var unanswered = saved.questions.filter(function(q) { return !q.answered; });
+                if (unanswered.length === 0) {
+                    // 全部答完，重新生成
+                    saved = null;
+                }
+            }
             if (saved && saved.questions && saved.questions.length > 0) {
                 quizState.correctCount = saved.correctCount || 0;
                 quizState.totalCount = saved.totalCount || 0;
@@ -1569,13 +1576,36 @@
         }
 
         function goNextQuestion() {
-            if (quizIndex < quizQuestions.length - 1) {
-                quizIndex++;
+            // 跳过已答过的题
+            var nextIdx = quizIndex + 1;
+            while (nextIdx < quizQuestions.length && quizQuestions[nextIdx].answered) {
+                nextIdx++;
+            }
+            if (nextIdx < quizQuestions.length) {
+                quizIndex = nextIdx;
                 renderQuizQuestion();
+            } else if (quizQuestions.filter(function(q) { return !q.answered; }).length === 0) {
+                // 全部答完
+                quizFeedback.textContent = '';
+                quizOptions.innerHTML = '';
+                quizWord.textContent = '已完成';
+                quizNavBtns.style.display = 'none';
+                document.getElementById('quizFeedback').innerHTML = '<div style="padding:20px;color:#4CAF50;font-size:18px;">&#127881; 今天的词复习完毕！</div>';
+                Storage.set('cet4_quiz_state', null);
             } else {
-                // 追加新题
+                // 追加未答新题
                 var needIds = Storage.getReviewableIds();
-                var needWords = WORDS.filter(function(w) { return needIds.indexOf(w.id) !== -1; });
+                var answeredIds = quizQuestions.map(function(q) { return q.word.id; });
+                var needWords = WORDS.filter(function(w) { return needIds.indexOf(w.id) !== -1 && answeredIds.indexOf(w.id) === -1; });
+                if (needWords.length === 0) {
+                    quizFeedback.textContent = '';
+                    quizOptions.innerHTML = '';
+                    quizWord.textContent = '';
+                    quizNavBtns.style.display = 'none';
+                    document.getElementById('quizFeedback').innerHTML = '<div style="padding:20px;color:#4CAF50;font-size:18px;">&#127881; 今天的词复习完毕！</div>';
+                    Storage.set('cet4_quiz_state', null);
+                    return;
+                }
                 shuffle(needWords);
                 var word = needWords[0];
                 var others = WORDS.filter(function(w) { return w.id !== word.id; });
