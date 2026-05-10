@@ -1519,14 +1519,12 @@
         var quizIndex = -1;       // 当前题目位置
 
         function initQuiz() {
-            var dueIds = Storage.getDueReviewIds();
-            var todayIds = Storage.getReviewableIds();
-            var allIds = dueIds.concat(todayIds.filter(function(id) { return dueIds.indexOf(id) === -1; }));
+            var todayIds = Storage.getTodayLearnedIds();
             // 检查是否已完成且无新词
             var done = Storage.get('cet4_quiz_done', null);
             if (done && done.date === new Date().toISOString().slice(0, 10)) {
                 var doneIds = done.wordIds || [];
-                var newWordIds = allIds.filter(function(id) { return doneIds.indexOf(id) === -1; });
+                var newWordIds = todayIds.filter(function(id) { return doneIds.indexOf(id) === -1; });
                 if (newWordIds.length === 0) {
                     // 无新词，直接显示完成
                     quizCard.style.display = 'block';
@@ -1581,7 +1579,7 @@
                 goNextQuestion();
                 return;
             }
-            if (allIds.length === 0) {
+            if (todayIds.length === 0) {
                 quizCard.style.display = 'none';
                 quizStats.style.display = 'none';
                 quizEmpty.style.display = 'block';
@@ -1620,19 +1618,13 @@
         }
 
         function buildQuestionPool(excludeIds) {
-            // 按今天学习顺序排列
             var todayIds = Storage.getTodayLearnedIds();
-            var dueIds = Storage.getDueReviewIds();
-            // 合并：今天学的 + 到期词，去重，保持学习顺序
-            var allIds = todayIds.slice();
-            dueIds.forEach(function(id) { if (allIds.indexOf(id) === -1) allIds.push(id); });
-            // 排除已完成的词
             if (excludeIds && excludeIds.length > 0) {
-                allIds = allIds.filter(function(id) { return excludeIds.indexOf(id) === -1; });
+                todayIds = todayIds.filter(function(id) { return excludeIds.indexOf(id) === -1; });
             }
             quizQuestions = [];
-            for (var i = 0; i < allIds.length; i++) {
-                var word = WORDS.find(function(w) { return w.id === allIds[i]; });
+            for (var i = 0; i < todayIds.length; i++) {
+                var word = WORDS.find(function(w) { return w.id === todayIds[i]; });
                 if (!word) continue;
                 var others = WORDS.filter(function(w) { return w.id !== word.id; });
                 shuffle(others);
