@@ -1125,9 +1125,11 @@
             return Object.keys(p).filter(function(id) { return p[id].status === 'need_review'; });
         },
         getReviewableIds: function() {
+            var today = new Date().toISOString().slice(0, 10);
             var p = this.getWordsProgress();
             return Object.keys(p).filter(function(id) {
-                return p[id].status === 'learned' || p[id].status === 'need_review';
+                var s = p[id];
+                return (s.status === 'learned' || s.status === 'need_review') && s.lastReview === today;
             });
         },
         getDailyStats: function() { return this.get('cet4_daily', {}); },
