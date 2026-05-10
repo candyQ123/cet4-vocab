@@ -1259,18 +1259,17 @@
             var today = new Date().toISOString().slice(0, 10);
             var progress = Storage.getWordsProgress();
 
-            // 尝试恢复当天队列
+            // 恢复当天队列（刷新不丢失）
             if (!dailyQueue) {
                 var saved = Storage.getDailyQueue();
                 if (saved && saved.words && saved.words.length > 0) {
                     dailyQueue = saved.words;
                     dailyPos = saved.position || 0;
                 } else {
-                    // 首次生成：随机排列未学词
+                    // 首次生成
                     var learnedIds = Storage.getLearnedWordIds();
                     var remaining = WORDS.filter(function(w) {
-                        if (learnedIds.indexOf(w.id) !== -1) return false;
-                        return true;
+                        return learnedIds.indexOf(w.id) === -1;
                     });
                     shuffle(remaining);
                     dailyQueue = remaining.map(function(w) { return w.id; });
@@ -1279,17 +1278,21 @@
                 }
             }
 
-            // 从队列取下一个未学的
+            // 从队列取下一个
             while (dailyPos < dailyQueue.length) {
                 var wid = dailyQueue[dailyPos];
-                var idx = WORDS.findIndex(function(w) { return w.id === wid; });
-                if (idx === -1) { dailyPos++; continue; }
+                var w = WORDS.find(function(x) { return x.id === wid; });
+                if (!w) { dailyPos++; continue; }
                 var s = progress[wid];
                 if (s && s.status === 'learned') { dailyPos++; continue; }
                 if (s && s.status === 'need_review' && s.lastReview === today) { dailyPos++; continue; }
+                // 找到，推进位置并保存
+                var word = w;
                 dailyPos++;
                 Storage.saveDailyQueue(dailyQueue, dailyPos);
-                return WORDS[idx];
+                // 也保存当前词，刷新可恢复
+                Storage.set('cet4_current_word', { id: word.id, pos: dailyPos - 1 });
+                return word;
             }
             return null;
         }
