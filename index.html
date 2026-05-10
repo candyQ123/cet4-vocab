@@ -1133,6 +1133,7 @@
     // 主逻辑
     // ===================================================================
     (function() {
+        try {
         // -- 状态 --
         var currentWord = null;
         var isFlipped = false;
@@ -1288,13 +1289,19 @@
             });
         }
 
-        // 预加载语音列表（加速首次发音）
+        // 预加载语音列表（安全模式）
         var cachedGBVoice = null;
-        speechSynthesis.onvoiceschanged = function() {
-            var voices = speechSynthesis.getVoices();
-            cachedGBVoice = voices.find(function(v) { return v.lang === 'en-GB'; }) || null;
-        };
-        speechSynthesis.getVoices(); // 触发加载
+        try {
+            if (window.speechSynthesis) {
+                speechSynthesis.onvoiceschanged = function() {
+                    var voices = speechSynthesis.getVoices();
+                    if (voices && voices.find) {
+                        cachedGBVoice = voices.find(function(v) { return v.lang === 'en-GB'; }) || null;
+                    }
+                };
+                speechSynthesis.getVoices();
+            }
+        } catch(e) {}
 
         function speakWord(text) {
             if (!window.speechSynthesis) { showToast('你的浏览器不支持发音'); return; }
@@ -1976,6 +1983,10 @@
 
         init();
         console.log('四级背单词助手已就绪 — ' + WORDS.length + ' 个内置单词');
+        } catch(e) {
+            document.body.innerHTML = '<div style="text-align:center;padding:100px 20px;font-size:18px;color:#F44336;"><b>加载失败</b><p style="color:#757575;font-size:14px;">请用Chrome浏览器打开此文件</p></div>';
+            console.error(e);
+        }
     })();
     </script>
 </body>
