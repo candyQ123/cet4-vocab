@@ -330,18 +330,18 @@
         <!-- ===== 听力面板 ===== -->
         <section id="listen-panel" class="panel">
             <div class="card">
-                <div class="card-title">&#127911; 听力听写</div>
-                <div style="font-size:13px;color:#6B7280;margin-bottom:12px;">点播放听单词，输入你听到的内容</div>
-                <button class="btn btn-primary btn-block" id="btnListenPlay" style="margin-bottom:10px;">&#9654; 播放单词</button>
-                <input class="form-input" id="listenInput" placeholder="输入你听到的单词..." autocomplete="off" autocapitalize="off" spellcheck="false">
-                <div class="btn-group">
-                    <button class="btn btn-outline btn-block" id="btnListenCheck">检查答案</button>
-                    <button class="btn btn-outline btn-block" id="btnListenHint">提示</button>
-                </div>
+                <div class="card-title">&#127911; 四级听力真题训练</div>
+                <div style="font-size:13px;color:#6B7280;margin-bottom:12px;">播放对话/短文 → 听问题 → 选择答案</div>
+            </div>
+            <div class="card" id="listenQuizCard">
+                <button class="btn btn-primary btn-block" id="btnListenPlay" style="margin-bottom:12px;">&#9654; 播放听力</button>
+                <div id="listenQuestion" style="font-size:15px;color:#1a237e;font-weight:600;margin-bottom:14px;display:none;"></div>
+                <div class="quiz-options" id="listenOptions"></div>
                 <div id="listenFeedback" style="text-align:center;margin-top:12px;font-size:15px;"></div>
+                <button class="btn btn-primary btn-block" id="btnListenNext" style="display:none;margin-top:12px;">下一题</button>
             </div>
             <div class="card">
-                <div class="card-title">听写统计</div>
+                <div class="card-title">听力统计</div>
                 <div class="stat-row">
                     <div class="stat-item"><div class="stat-num" id="listenCorrect" style="color:#10B981;">0</div><div class="stat-label">正确</div></div>
                     <div class="stat-item"><div class="stat-num" id="listenTotal">0</div><div class="stat-label">总题数</div></div>
@@ -3111,44 +3111,90 @@
         document.getElementById('btnMemPrev').addEventListener('click', memGoPrev);
 
         // -- 听力 --
-        var listenWord = null, listenCorrect = 0, listenTotal = 0;
+        var LISTEN_QUIZZES = [
+            { passage: "W: Excuse me, could you tell me where the nearest bank is? M: Sure. Go straight ahead for two blocks and you'll see it on your left, next to the post office.", question: "Where is the bank?", options: ["Next to the post office", "Behind the supermarket", "Opposite the park", "Inside the shopping mall"], answer: 0 },
+            { passage: "M: I'd like to book a room for two nights, please. W: Certainly. A single room or a double room? M: A single room with a view of the sea, if possible.", question: "What kind of room does the man want?", options: ["A double room", "A single room with a sea view", "A room on the ground floor", "A suite with a balcony"], answer: 1 },
+            { passage: "W: The final exam is next Monday. Have you started preparing yet? M: Not really. I've been so busy with the part-time job. I'll start this weekend.", question: "What does the man mean?", options: ["He has already prepared well", "He will start preparing this weekend", "He doesn't need to take the exam", "He will quit his part-time job"], answer: 1 },
+            { passage: "M: Excuse me, what time does the library close today? W: It closes at nine on weekdays, but on weekends it closes at five.", question: "When does the library close on weekends?", options: ["At 9:00", "At 10:00", "At 5:00", "At 6:00"], answer: 2 },
+            { passage: "W: I heard you got a new job. Congratulations! M: Thank you! I'll be working as a software engineer at a tech company. W: That sounds exciting. When do you start?", question: "What will the man work as?", options: ["A teacher", "A doctor", "A software engineer", "A lawyer"], answer: 2 },
+            { passage: "M: Did you enjoy the movie last night? W: To be honest, I found it rather boring. The plot was predictable and the acting was just average.", question: "How did the woman feel about the movie?", options: ["She loved it", "She found it boring", "She thought the acting was great", "She didn't watch it"], answer: 1 },
+            { passage: "W: I'm thinking of learning a second foreign language. Do you have any suggestions? M: Spanish might be a good choice. It's widely spoken and relatively easy for English speakers.", question: "What does the man recommend?", options: ["French", "German", "Japanese", "Spanish"], answer: 3 },
+            { passage: "M: The weather has been terrible lately. W: I know. It's been raining for three days straight. The forecast says it will clear up tomorrow though.", question: "What does the forecast say about tomorrow?", options: ["It will rain heavily", "It will snow", "It will clear up", "It will be windy"], answer: 2 },
+            { passage: "W: Have you finished your application for the exchange program? M: Not yet. The deadline is next Friday, so I still have a few days. I need to write a personal statement and get two recommendation letters.", question: "When is the deadline for the application?", options: ["This Friday", "Next Friday", "Next Monday", "This Monday"], answer: 1 },
+            { passage: "M: I've been feeling really stressed lately with all the assignments. W: Maybe you should try exercising. Even a short walk can help reduce stress. M: You're right. I'll give it a try.", question: "What does the woman suggest the man do?", options: ["Get more sleep", "Try exercising", "Drop some courses", "Talk to a teacher"], answer: 1 },
+            { passage: "W: Excuse me, is this the right platform for the 8:30 train to Beijing? M: No, the 8:30 train departs from Platform 5. This is Platform 3.", question: "Which platform does the 8:30 train depart from?", options: ["Platform 3", "Platform 5", "Platform 8", "Platform 10"], answer: 1 },
+            { passage: "M: I'm planning a trip to Yunnan this summer vacation. W: That's a great choice! The scenery there is breathtaking. Make sure you visit Lijiang and Dali.", question: "What does the woman recommend visiting?", options: ["Beijing and Shanghai", "Lijiang and Dali", "Guilin and Yangshuo", "Xi'an and Chengdu"], answer: 1 },
+            { passage: "W: The professor extended the deadline for the research paper. M: Really? That's a relief! I was worried I wouldn't finish on time.", question: "How does the man feel about the extension?", options: ["Angry", "Disappointed", "Relieved", "Confused"], answer: 2 },
+            { passage: "M: I prefer studying in the morning when my mind is fresh. W: I'm the opposite. I can't focus until late at night. I do my best work after 10 pm.", question: "When does the woman prefer to study?", options: ["Early in the morning", "In the afternoon", "Late at night", "At noon"], answer: 2 },
+            { passage: "W: Did you hear about the new campus policy? M: No, what is it? W: They're banning cars from the central campus area starting next month to reduce pollution.", question: "What is the new campus policy about?", options: ["Building new parking lots", "Banning cars from central campus", "Increasing parking fees", "Encouraging students to buy cars"], answer: 1 }
+        ];
+
+        var listenQuizIdx = -1, listenCorrect = 0, listenTotal = 0, currentListenQuiz = null, listenAnswered = false;
+
         function initListen() {
-            var pool = WORDS.slice(); shuffle(pool);
-            listenWord = pool[0];
             document.getElementById('listenFeedback').textContent = '';
-            document.getElementById('listenInput').value = '';
+            document.getElementById('listenQuestion').style.display = 'none';
+            document.getElementById('listenOptions').innerHTML = '';
+            document.getElementById('btnListenNext').style.display = 'none';
+            document.getElementById('btnListenPlay').style.display = 'block';
+            listenQuizIdx = -1; listenAnswered = false;
         }
+
         document.getElementById('btnListenPlay').addEventListener('click', function() {
-            if (!listenWord) { var p = WORDS.slice(); shuffle(p); listenWord = p[0]; }
-            speakWord(listenWord.word);
-            document.getElementById('listenFeedback').innerHTML = '<span style="color:#6B7280;">已播放，请听写...</span>';
+            var pool = LISTEN_QUIZZES.slice(); shuffle(pool); listenQuizIdx = -1;
+            goNextListenQuiz();
         });
-        document.getElementById('btnListenCheck').addEventListener('click', function() {
-            var input = document.getElementById('listenInput').value.trim().toLowerCase();
-            var correct = listenWord.word.toLowerCase();
-            if (!input) { showToast('请先输入你听到的单词'); return; }
-            listenTotal++;
-            document.getElementById('listenTotal').textContent = listenTotal;
-            if (input === correct) {
-                listenCorrect++;
-                document.getElementById('listenCorrect').textContent = listenCorrect;
-                document.getElementById('listenFeedback').innerHTML = '<span style="color:#10B981;">&#10004; 正确！</span> ' + listenWord.word + ' — ' + listenWord.meaning;
-                // 下一题
-                var pool = WORDS.slice(); shuffle(pool); listenWord = pool[0];
-                document.getElementById('listenInput').value = '';
-            } else {
-                document.getElementById('listenFeedback').innerHTML = '<span style="color:#EF4444;">&#10008; 错误</span> 正确答案：<b>' + listenWord.word + '</b> — ' + listenWord.meaning;
-                if (!Storage.isBookmarked(listenWord.id)) Storage.addBookmark(listenWord.id);
-            }
-        });
-        document.getElementById('btnListenHint').addEventListener('click', function() {
-            var w = listenWord;
-            var hint = w.word.charAt(0) + '_'.repeat(w.word.length - 2) + w.word.charAt(w.word.length - 1);
-            document.getElementById('listenFeedback').innerHTML = '提示：' + hint + ' (' + w.meaning.charAt(0) + '...)';
-        });
-        document.getElementById('listenInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') document.getElementById('btnListenCheck').click();
-        });
+
+        function goNextListenQuiz() {
+            listenQuizIdx++;
+            if (listenQuizIdx >= LISTEN_QUIZZES.length) { listenQuizIdx = 0; shuffle(LISTEN_QUIZZES); }
+            currentListenQuiz = LISTEN_QUIZZES[listenQuizIdx];
+            listenAnswered = false;
+            document.getElementById('btnListenPlay').style.display = 'none';
+            document.getElementById('btnListenNext').style.display = 'none';
+            document.getElementById('listenQuestion').style.display = 'none';
+            document.getElementById('listenOptions').innerHTML = '';
+            document.getElementById('listenFeedback').textContent = '';
+
+            // 播放对话和问题
+            speakSentence(currentListenQuiz.passage);
+            var totalDelay = currentListenQuiz.passage.split(' ').length * 400 + 1000;
+            setTimeout(function() {
+                document.getElementById('listenQuestion').textContent = 'Question: ' + currentListenQuiz.question;
+                document.getElementById('listenQuestion').style.display = 'block';
+                speakSentence(currentListenQuiz.question);
+                // 显示选项
+                var html = '';
+                currentListenQuiz.options.forEach(function(opt, i) {
+                    html += '<button class="quiz-option listen-opt" data-idx="' + i + '">' + String.fromCharCode(65+i) + '. ' + opt + '</button>';
+                });
+                document.getElementById('listenOptions').innerHTML = html;
+                document.querySelectorAll('.listen-opt').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        if (listenAnswered) return;
+                        listenAnswered = true;
+                        var idx = parseInt(this.getAttribute('data-idx'));
+                        listenTotal++;
+                        document.getElementById('listenTotal').textContent = listenTotal;
+                        document.querySelectorAll('.listen-opt').forEach(function(b) {
+                            if (parseInt(b.getAttribute('data-idx')) === currentListenQuiz.answer) b.classList.add('correct');
+                            b.style.pointerEvents = 'none';
+                        });
+                        if (idx === currentListenQuiz.answer) {
+                            listenCorrect++;
+                            document.getElementById('listenCorrect').textContent = listenCorrect;
+                            document.getElementById('listenFeedback').innerHTML = '<span style="color:#10B981;">&#10004; 正确！</span>';
+                        } else {
+                            this.classList.add('wrong');
+                            document.getElementById('listenFeedback').innerHTML = '<span style="color:#EF4444;">&#10008; 错误</span> 正确答案：' + String.fromCharCode(65+currentListenQuiz.answer) + '. ' + currentListenQuiz.options[currentListenQuiz.answer];
+                        }
+                        document.getElementById('btnListenNext').style.display = 'flex';
+                    });
+                });
+            }, totalDelay);
+        }
+
+        document.getElementById('btnListenNext').addEventListener('click', goNextListenQuiz);
 
         // -- 语法 --
         var grammarContent = document.getElementById('grammarContent');
