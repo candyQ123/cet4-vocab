@@ -1568,8 +1568,7 @@
                 if (w && needWords.indexOf(w) === -1) needWords.push(w);
             });
             quizQuestions = [];
-            var count = Math.min(30, needWords.length);
-            for (var i = 0; i < count; i++) {
+            for (var i = 0; i < needWords.length; i++) {
                 var word = needWords[i];
                 var others = WORDS.filter(function(w) { return w.id !== word.id; });
                 shuffle(others);
@@ -1586,37 +1585,13 @@
             if (nextIdx < quizQuestions.length) {
                 quizIndex = nextIdx;
                 renderQuizQuestion();
-            } else if (quizQuestions.filter(function(q) { return !q.answered; }).length === 0) {
+            } else {
                 // 全部答完
-                quizFeedback.textContent = '';
+                quizWord.textContent = '';
                 quizOptions.innerHTML = '';
-                quizWord.textContent = '已完成';
                 quizNavBtns.style.display = 'none';
                 document.getElementById('quizFeedback').innerHTML = '<div style="padding:20px;color:#4CAF50;font-size:18px;">&#127881; 今天的词复习完毕！</div>';
                 Storage.set('cet4_quiz_state', null);
-            } else {
-                // 追加未答新题
-                var dueIds = Storage.getDueReviewIds();
-                var todayIds = Storage.getReviewableIds();
-                var allNeedIds = dueIds.concat(todayIds.filter(function(id) { return dueIds.indexOf(id) === -1; }));
-                var answeredIds = quizQuestions.map(function(q) { return q.word.id; });
-                var needWords = WORDS.filter(function(w) { return allNeedIds.indexOf(w.id) !== -1 && answeredIds.indexOf(w.id) === -1; });
-                if (needWords.length === 0) {
-                    quizFeedback.textContent = '';
-                    quizOptions.innerHTML = '';
-                    quizWord.textContent = '';
-                    quizNavBtns.style.display = 'none';
-                    document.getElementById('quizFeedback').innerHTML = '<div style="padding:20px;color:#4CAF50;font-size:18px;">&#127881; 今天的词复习完毕！</div>';
-                    Storage.set('cet4_quiz_state', null);
-                    return;
-                }
-                shuffle(needWords);
-                var word = needWords[0];
-                var others = WORDS.filter(function(w) { return w.id !== word.id; });
-                shuffle(others);
-                quizQuestions.push({ word: word, distractors: others.slice(0, 3) });
-                quizIndex++;
-                renderQuizQuestion();
             }
         }
 
