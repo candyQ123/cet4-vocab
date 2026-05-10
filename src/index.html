@@ -1590,8 +1590,31 @@
                 quizWord.textContent = '';
                 quizOptions.innerHTML = '';
                 quizNavBtns.style.display = 'none';
-                document.getElementById('quizFeedback').innerHTML = '<div style="padding:20px;color:#4CAF50;font-size:18px;">&#127881; 今天的词复习完毕！</div>';
+                // 检查有没有答错的
+                var wrongQs = quizQuestions.filter(function(q) { return q.answered && !q.isCorrect; });
+                var completeHtml = '<div style="padding:20px;color:#4CAF50;font-size:18px;">&#127881; 今天的词复习完毕！</div>';
+                if (wrongQs.length > 0) {
+                    completeHtml += '<div style="color:#F44336;margin:8px 0;">答错 ' + wrongQs.length + ' 题</div>';
+                    completeHtml += '<button class="btn btn-danger btn-block" id="btnRetryWrong" style="margin-top:10px;">错题重练 (' + wrongQs.length + ')</button>';
+                }
+                document.getElementById('quizFeedback').innerHTML = completeHtml;
                 Storage.set('cet4_quiz_state', null);
+                // 错题重练按钮
+                var retryBtn = document.getElementById('btnRetryWrong');
+                if (retryBtn) {
+                    retryBtn.addEventListener('click', function() {
+                        quizQuestions = wrongQs.map(function(q) {
+                            var others = WORDS.filter(function(w) { return w.id !== q.word.id; });
+                            shuffle(others);
+                            return { word: q.word, distractors: others.slice(0, 3), answered: false, isCorrect: undefined };
+                        });
+                        quizState = { correctCount: 0, totalCount: 0, currentQuestion: null, answered: false };
+                        quizIndex = -1;
+                        updateQuizStats();
+                        goNextQuestion();
+                        retryBtn.style.display = 'none';
+                    });
+                }
             }
         }
 
