@@ -179,6 +179,15 @@
             <input type="file" id="importFile" accept=".json" style="display:none;">
             <hr style="border:none;border-top:1px solid #E0E0E0;margin:16px 0;">
             <button class="btn btn-outline btn-block" id="btnResetReview" style="margin-bottom:8px;">重置今日复习</button>
+            <hr style="border:none;border-top:1px solid #E0E0E0;margin:16px 0;">
+            <div style="font-weight:600;font-size:14px;margin-bottom:8px;">&#128260; 跨设备同步</div>
+            <div style="font-size:12px;color:#6B7280;margin-bottom:8px;">在电脑生成同步码 → 手机上输入 → 数据同步</div>
+            <button class="btn btn-primary btn-block" id="btnSyncExport" style="margin-bottom:8px;">生成同步码</button>
+            <div style="display:flex;gap:8px;">
+                <input class="form-input" id="syncCodeInput" placeholder="粘贴同步码..." style="flex:1;">
+                <button class="btn btn-success" id="btnSyncImport" style="min-width:60px;">导入</button>
+            </div>
+            <hr style="border:none;border-top:1px solid #E0E0E0;margin:16px 0;">
             <button class="btn btn-danger btn-block" id="btnReset">重置所有数据</button>
         </div>
     </div>
@@ -3369,6 +3378,29 @@
             reader.readAsText(file);
             this.value = '';
         });
+        // 同步码导出
+        document.getElementById('btnSyncExport').addEventListener('click', function() {
+            var data = Storage.exportAll();
+            var json = JSON.stringify(data);
+            var code = btoa(unescape(encodeURIComponent(json)));
+            document.getElementById('syncCodeInput').value = code;
+            showToast('同步码已生成！复制发给另一台设备');
+        });
+        // 同步码导入
+        document.getElementById('btnSyncImport').addEventListener('click', function() {
+            var code = document.getElementById('syncCodeInput').value.trim();
+            if (!code) { showToast('请先粘贴同步码'); return; }
+            try {
+                var json = decodeURIComponent(escape(atob(code)));
+                var data = JSON.parse(json);
+                if (confirm('确定导入同步数据吗？当前数据将被覆盖。')) {
+                    Storage.importAll(data);
+                    showToast('同步成功！数据已恢复，请刷新页面');
+                    setTimeout(function() { location.reload(); }, 1500);
+                }
+            } catch(e) { showToast('同步码无效，请检查'); }
+        });
+
         document.getElementById('btnResetReview').addEventListener('click', function() {
             Storage.set('cet4_quiz_state', null);
             Storage.set('cet4_quiz_done', null);
