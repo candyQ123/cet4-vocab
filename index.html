@@ -173,6 +173,7 @@
             </div>
             <input type="file" id="importFile" accept=".json" style="display:none;">
             <hr style="border:none;border-top:1px solid #E0E0E0;margin:16px 0;">
+            <button class="btn btn-outline btn-block" id="btnResetReview" style="margin-bottom:8px;">重置今日复习</button>
             <button class="btn btn-danger btn-block" id="btnReset">重置所有数据</button>
         </div>
     </div>
@@ -2110,6 +2111,12 @@
             };
             reader.readAsText(file);
             this.value = '';
+        });
+        document.getElementById('btnResetReview').addEventListener('click', function() {
+            Storage.set('cet4_quiz_state', null);
+            Storage.set('cet4_quiz_done', null);
+            closeSettings();
+            showToast('今日复习已重置');
         });
         document.getElementById('btnReset').addEventListener('click', function() {
             if (confirm('确定要删除所有学习数据吗？此操作不可恢复！\n\n建议先导出备份。')) {
