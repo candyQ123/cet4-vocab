@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0">
     <link rel="manifest" href="manifest.json">
-    <title>四级背单词</title>
+    <title>English Learning</title>
     <script>
     try {
         if ('serviceWorker' in navigator && location.protocol === 'https:') {
@@ -141,7 +141,7 @@
 
     <!-- 导航栏 -->
     <nav class="navbar">
-        <div class="nav-title">四级背单词</div>
+        <div class="nav-title">English Learning</div>
         <div class="nav-tabs">
             <button class="nav-tab active" data-tab="learn">学习</button>
             <button class="nav-tab" data-tab="review">复习<span id="reviewBadge" style="display:none;background:#F44336;color:#fff;font-size:11px;padding:1px 6px;border-radius:10px;margin-left:4px;vertical-align:top;"></span></button>
@@ -1982,7 +1982,7 @@
         }
 
         init();
-        console.log('四级背单词助手已就绪 — ' + WORDS.length + ' 个内置单词');
+        console.log('English Learning 已就绪 — ' + WORDS.length + ' 个内置单词');
         } catch(e) {
             document.body.innerHTML = '<div style="text-align:center;padding:100px 20px;font-size:18px;color:#F44336;"><b>加载失败</b><p style="color:#757575;font-size:14px;">请用Chrome浏览器打开此文件</p></div>';
             console.error(e);
