@@ -2421,39 +2421,47 @@
             });
         }
 
-        // 预加载语音列表（安全模式）
-        var cachedGBVoice = null;
+        // 语音引擎（兼容手机）
+        var cachedGBVoice = null, voicesLoaded = false;
+        function loadVoices() {
+            if (voicesLoaded || !window.speechSynthesis) return;
+            var voices = speechSynthesis.getVoices();
+            if (voices && voices.length > 0) {
+                cachedGBVoice = voices.find(function(v) { return v.lang === 'en-GB'; }) || voices.find(function(v) { return v.lang.startsWith('en'); }) || null;
+                voicesLoaded = true;
+            }
+        }
         try {
             if (window.speechSynthesis) {
-                speechSynthesis.onvoiceschanged = function() {
-                    var voices = speechSynthesis.getVoices();
-                    if (voices && voices.find) {
-                        cachedGBVoice = voices.find(function(v) { return v.lang === 'en-GB'; }) || null;
-                    }
-                };
-                speechSynthesis.getVoices();
+                speechSynthesis.onvoiceschanged = loadVoices;
+                loadVoices();
+                // 手机可能需要延迟加载
+                setTimeout(loadVoices, 500);
             }
         } catch(e) {}
 
         function speakWord(text) {
-            if (!window.speechSynthesis) { showToast('你的浏览器不支持发音'); return; }
+            if (!window.speechSynthesis) { showToast('不支持发音'); return; }
+            loadVoices();
             window.speechSynthesis.cancel();
             var utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-GB';
             utterance.rate = 0.9;
             utterance.volume = 1;
             if (cachedGBVoice) utterance.voice = cachedGBVoice;
-            speechSynthesis.speak(utterance);
+            // 手机需要小延迟
+            setTimeout(function() { speechSynthesis.speak(utterance); }, 50);
         }
         function speakSentence(text) {
             if (!window.speechSynthesis) return;
+            loadVoices();
             window.speechSynthesis.cancel();
             var utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-GB';
             utterance.rate = 0.8;
             utterance.volume = 1;
             if (cachedGBVoice) utterance.voice = cachedGBVoice;
-            speechSynthesis.speak(utterance);
+            setTimeout(function() { speechSynthesis.speak(utterance); }, 50);
         }
         window._speak = speakWord;
 
@@ -3209,7 +3217,8 @@
 
             // 播放对话和问题
             speakSentence(currentListenQuiz.passage);
-            var totalDelay = currentListenQuiz.passage.split(' ').length * 400 + 1000;
+            var wordCount = currentListenQuiz.passage.split(' ').length;
+            var totalDelay = Math.max(wordCount * 500 + 2000, 5000);
             setTimeout(function() {
                 document.getElementById('listenQuestion').textContent = 'Question: ' + currentListenQuiz.question;
                 document.getElementById('listenQuestion').style.display = 'block';
