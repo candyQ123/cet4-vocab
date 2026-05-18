@@ -2421,47 +2421,53 @@
             });
         }
 
-        // 语音引擎（兼容手机）
-        var cachedGBVoice = null, voicesLoaded = false;
+        // 语音引擎（兼容所有设备）
+        var cachedGBVoice = null;
         function loadVoices() {
-            if (voicesLoaded || !window.speechSynthesis) return;
+            if (!window.speechSynthesis) return;
             var voices = speechSynthesis.getVoices();
             if (voices && voices.length > 0) {
-                cachedGBVoice = voices.find(function(v) { return v.lang === 'en-GB'; }) || voices.find(function(v) { return v.lang.startsWith('en'); }) || null;
-                voicesLoaded = true;
+                for (var i = 0; i < voices.length; i++) {
+                    if (voices[i].lang === 'en-GB') { cachedGBVoice = voices[i]; return; }
+                }
+                // 兜底：找任意英语语音
+                for (var j = 0; j < voices.length; j++) {
+                    if (voices[j].lang.indexOf('en') === 0) { cachedGBVoice = voices[j]; return; }
+                }
             }
         }
         try {
             if (window.speechSynthesis) {
                 speechSynthesis.onvoiceschanged = loadVoices;
                 loadVoices();
-                // 手机可能需要延迟加载
-                setTimeout(loadVoices, 500);
             }
         } catch(e) {}
 
         function speakWord(text) {
-            if (!window.speechSynthesis) { showToast('不支持发音'); return; }
+            if (!window.speechSynthesis) { showToast('浏览器不支持发音'); return; }
             loadVoices();
-            window.speechSynthesis.cancel();
-            var utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-GB';
-            utterance.rate = 0.9;
-            utterance.volume = 1;
-            if (cachedGBVoice) utterance.voice = cachedGBVoice;
-            // 手机需要小延迟
-            setTimeout(function() { speechSynthesis.speak(utterance); }, 50);
+            try {
+                window.speechSynthesis.cancel();
+                var utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-GB';
+                utterance.rate = 0.9;
+                utterance.volume = 1;
+                if (cachedGBVoice) utterance.voice = cachedGBVoice;
+                speechSynthesis.speak(utterance);
+            } catch(e) { showToast('发音失败，请检查系统语音设置'); }
         }
         function speakSentence(text) {
             if (!window.speechSynthesis) return;
             loadVoices();
-            window.speechSynthesis.cancel();
-            var utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-GB';
-            utterance.rate = 0.8;
-            utterance.volume = 1;
-            if (cachedGBVoice) utterance.voice = cachedGBVoice;
-            setTimeout(function() { speechSynthesis.speak(utterance); }, 50);
+            try {
+                window.speechSynthesis.cancel();
+                var utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-GB';
+                utterance.rate = 0.8;
+                utterance.volume = 1;
+                if (cachedGBVoice) utterance.voice = cachedGBVoice;
+                speechSynthesis.speak(utterance);
+            } catch(e) {}
         }
         window._speak = speakWord;
 
@@ -3189,6 +3195,7 @@
         ];
 
         var listenQuizIdx = -1, listenCorrect = 0, listenTotal = 0, currentListenQuiz = null, listenAnswered = false;
+        var listenBatch = []; // 当前轮 4 道题
 
         function initListen() {
             document.getElementById('listenFeedback').textContent = '';
@@ -3196,34 +3203,45 @@
             document.getElementById('listenOptions').innerHTML = '';
             document.getElementById('btnListenNext').style.display = 'none';
             document.getElementById('btnListenPlay').style.display = 'block';
-            listenQuizIdx = -1; listenAnswered = false;
+            listenBatch = []; listenQuizIdx = -1; listenAnswered = false;
         }
 
         document.getElementById('btnListenPlay').addEventListener('click', function() {
-            var pool = LISTEN_QUIZZES.slice(); shuffle(pool); listenQuizIdx = -1;
+            // 随机抽 4 题
+            var pool = LISTEN_QUIZZES.slice(); shuffle(pool);
+            listenBatch = pool.slice(0, 4);
+            listenQuizIdx = -1; listenCorrect = 0; listenTotal = 0;
+            document.getElementById('listenCorrect').textContent = '0';
+            document.getElementById('listenTotal').textContent = '0';
+            document.getElementById('btnListenPlay').style.display = 'none';
             goNextListenQuiz();
         });
 
         function goNextListenQuiz() {
             listenQuizIdx++;
-            if (listenQuizIdx >= LISTEN_QUIZZES.length) { listenQuizIdx = 0; shuffle(LISTEN_QUIZZES); }
-            currentListenQuiz = LISTEN_QUIZZES[listenQuizIdx];
+            if (listenQuizIdx >= listenBatch.length) {
+                // 全部完成
+                document.getElementById('listenQuestion').style.display = 'none';
+                document.getElementById('listenOptions').innerHTML = '';
+                document.getElementById('btnListenNext').style.display = 'none';
+                var acc = listenTotal > 0 ? Math.round(listenCorrect/listenTotal*100) : 0;
+                document.getElementById('listenFeedback').innerHTML = '<div style="padding:16px;color:#10B981;font-size:18px;">本组完成！</div><div>正确 ' + listenCorrect + ' / ' + listenTotal + '（' + acc + '%）</div><button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="document.getElementById(\'btnListenPlay\').style.display=\'block\';document.getElementById(\'listenFeedback\').textContent=\'\';">再来一组</button>';
+                return;
+            }
+            currentListenQuiz = listenBatch[listenQuizIdx];
             listenAnswered = false;
-            document.getElementById('btnListenPlay').style.display = 'none';
             document.getElementById('btnListenNext').style.display = 'none';
             document.getElementById('listenQuestion').style.display = 'none';
             document.getElementById('listenOptions').innerHTML = '';
-            document.getElementById('listenFeedback').textContent = '';
+            document.getElementById('listenFeedback').textContent = '<span style="color:#6B7280;">第 ' + (listenQuizIdx+1) + ' / ' + listenBatch.length + ' 题</span>';
 
-            // 播放对话和问题
             speakSentence(currentListenQuiz.passage);
             var wordCount = currentListenQuiz.passage.split(' ').length;
-            var totalDelay = Math.max(wordCount * 500 + 2000, 5000);
+            var totalDelay = Math.max(wordCount * 500 + 2500, 6000);
             setTimeout(function() {
-                document.getElementById('listenQuestion').textContent = 'Question: ' + currentListenQuiz.question;
+                document.getElementById('listenQuestion').textContent = 'Q: ' + currentListenQuiz.question;
                 document.getElementById('listenQuestion').style.display = 'block';
                 speakSentence(currentListenQuiz.question);
-                // 显示选项
                 var html = '';
                 currentListenQuiz.options.forEach(function(opt, i) {
                     html += '<button class="quiz-option listen-opt" data-idx="' + i + '">' + String.fromCharCode(65+i) + '. ' + opt + '</button>';
@@ -3243,15 +3261,41 @@
                         if (idx === currentListenQuiz.answer) {
                             listenCorrect++;
                             document.getElementById('listenCorrect').textContent = listenCorrect;
-                            document.getElementById('listenFeedback').innerHTML = '<span style="color:#10B981;">&#10004; 正确！</span>';
+                            document.getElementById('listenFeedback').innerHTML = '<span style="color:#10B981;font-size:16px;">&#10004; 正确！</span>';
                         } else {
                             this.classList.add('wrong');
-                            document.getElementById('listenFeedback').innerHTML = '<span style="color:#EF4444;">&#10008; 错误</span> 正确答案：' + String.fromCharCode(65+currentListenQuiz.answer) + '. ' + currentListenQuiz.options[currentListenQuiz.answer];
+                            var correctAns = String.fromCharCode(65+currentListenQuiz.answer) + '. ' + currentListenQuiz.options[currentListenQuiz.answer];
+                            document.getElementById('listenFeedback').innerHTML = '<div style="color:#EF4444;font-size:16px;">&#10008; 错误</div><div style="text-align:left;margin-top:8px;padding:10px;background:#F9FAFB;border-radius:10px;font-size:13px;line-height:1.7;">正确答案：<b style="color:#10B981;">' + correctAns + '</b><br><br><b>原文翻译：</b><br>' + getPassageTranslation(currentListenQuiz) + '<br><br><b>解析：</b>' + getListenExplanation(currentListenQuiz) + '</div>';
                         }
                         document.getElementById('btnListenNext').style.display = 'flex';
                     });
                 });
             }, totalDelay);
+        }
+
+        function getPassageTranslation(q) {
+            var trans = {
+                "W: Excuse me, could you tell me where the nearest bank is? M: Sure. Go straight ahead for two blocks and you'll see it on your left, next to the post office.": "女：请问最近的银行在哪？男：直走两个街区，左手边，邮局旁边。",
+                "M: I'd like to book a room for two nights, please. W: Certainly. A single room or a double room? M: A single room with a view of the sea, if possible.": "男：我想订两晚房间。女：单人间还是双人间？男：如果可以的话，想要海景单人间。",
+                "W: The final exam is next Monday. Have you started preparing yet? M: Not really. I've been so busy with the part-time job. I'll start this weekend.": "女：下周一期末考，你开始准备了吗？男：还没，兼职太忙了，这周末开始。",
+                "M: Excuse me, what time does the library close today? W: It closes at nine on weekdays, but on weekends it closes at five.": "男：请问图书馆今天几点关门？女：工作日九点，周末五点关门。",
+                "W: I heard you got a new job. Congratulations! M: Thank you! I'll be working as a software engineer at a tech company. W: That sounds exciting. When do you start?": "女：听说你找到新工作了，恭喜！男：谢谢！在一家科技公司做软件工程师。女：听起来很棒，什么时候开始？",
+                "M: Did you enjoy the movie last night? W: To be honest, I found it rather boring. The plot was predictable and the acting was just average.": "男：昨晚电影好看吗？女：说实话挺无聊的，剧情能猜到，演技一般。",
+                "W: I'm thinking of learning a second foreign language. Do you have any suggestions? M: Spanish might be a good choice. It's widely spoken and relatively easy for English speakers.": "女：我想学第二外语，有建议吗？男：西班牙语不错，使用广泛且对英语母语者相对容易。",
+                "M: The weather has been terrible lately. W: I know. It's been raining for three days straight. The forecast says it will clear up tomorrow though.": "男：最近天气太差了。女：是啊，下了三天雨了，预报说明天转晴。",
+                "W: Have you finished your application for the exchange program? M: Not yet. The deadline is next Friday, so I still have a few days.": "女：交换项目申请写完了吗？男：还没，下周五截止，还有几天。",
+                "M: I've been feeling really stressed lately with all the assignments. W: Maybe you should try exercising. Even a short walk can help reduce stress.": "男：最近作业多压力大。女：试试运动吧，散步都能减压。",
+                "W: Excuse me, is this the right platform for the 8:30 train to Beijing? M: No, the 8:30 train departs from Platform 5. This is Platform 3.": "女：请问8:30去北京的火车是这个站台吗？男：不，8:30的在5号站台，这里是3号。",
+                "M: I'm planning a trip to Yunnan this summer vacation. W: That's a great choice! The scenery there is breathtaking. Make sure you visit Lijiang and Dali.": "男：暑假打算去云南。女：好选择！风景美极了，一定去丽江和大理。",
+                "W: The professor extended the deadline for the research paper. M: Really? That's a relief! I was worried I wouldn't finish on time.": "女：教授把论文截止日期延后了。男：真的吗？松了一口气！我还担心写不完。",
+                "M: I prefer studying in the morning when my mind is fresh. W: I'm the opposite. I can't focus until late at night.": "男：我喜欢早上学，头脑清醒。女：我相反，不到深夜无法集中注意力。",
+                "W: Did you hear about the new campus policy? M: No, what is it? W: They're banning cars from the central campus area starting next month.": "女：听说新校规了吗？男：没有，什么内容？女：下月起中心校区禁止车辆通行。"
+            };
+            return trans[q.passage] || '（对话翻译暂未收录）';
+        }
+
+        function getListenExplanation(q) {
+            return '本题是四级听力典型场景题。注意抓关键词：' + q.question.split(' ').slice(0,3).join(' ') + '...' + ' 听力技巧：①预览选项预测问题方向 ②注意转折词(but/however) ③数字和时间是必考点 ④对话人的态度和语气也很关键。';
         }
 
         document.getElementById('btnListenNext').addEventListener('click', goNextListenQuiz);
