@@ -2466,15 +2466,16 @@
         }
         function playOnlineAudio(text, rate) {
             try {
-                var url = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=' + encodeURIComponent(text);
+                // 有道 TTS（国内可用）
+                var url = 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=1';
                 var audio = new Audio(url);
                 audio.playbackRate = rate;
                 audio.play().catch(function() {
-                    // 在线也失败，降级到本地 TTS 再试
+                    // 兜底：本地 TTS
                     if (window.speechSynthesis) {
+                        speechSynthesis.cancel();
                         var u2 = new SpeechSynthesisUtterance(text);
                         u2.lang = 'en-US'; u2.rate = rate;
-                        speechSynthesis.cancel();
                         speechSynthesis.speak(u2);
                     }
                 });
