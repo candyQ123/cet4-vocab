@@ -2444,28 +2444,28 @@
         } catch(e) {}
 
         function speakWord(text) {
-            if (!window.speechSynthesis) { showToast('浏览器不支持发音'); return; }
-            loadVoices();
+            if (!window.speechSynthesis) { showToast('浏览器不支持发音，请换Chrome'); return; }
             try {
-                window.speechSynthesis.cancel();
                 var utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-GB';
+                utterance.lang = 'en-US';
                 utterance.rate = 0.9;
                 utterance.volume = 1;
+                loadVoices();
                 if (cachedGBVoice) utterance.voice = cachedGBVoice;
+                speechSynthesis.cancel();
                 speechSynthesis.speak(utterance);
-            } catch(e) { showToast('发音失败，请检查系统语音设置'); }
+            } catch(e) { showToast('发音失败，请换Chrome浏览器'); }
         }
         function speakSentence(text) {
             if (!window.speechSynthesis) return;
-            loadVoices();
             try {
-                window.speechSynthesis.cancel();
                 var utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-GB';
+                utterance.lang = 'en-US';
                 utterance.rate = 0.8;
                 utterance.volume = 1;
+                loadVoices();
                 if (cachedGBVoice) utterance.voice = cachedGBVoice;
+                speechSynthesis.cancel();
                 speechSynthesis.speak(utterance);
             } catch(e) {}
         }
