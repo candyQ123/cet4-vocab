@@ -2443,30 +2443,41 @@
             }
         } catch(e) {}
 
+        // 发音：先试 TTS，失败用在线音频
         function speakWord(text) {
-            if (!window.speechSynthesis) { showToast('浏览器不支持发音，请换Chrome'); return; }
-            try {
-                var utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US';
-                utterance.rate = 0.9;
-                utterance.volume = 1;
-                loadVoices();
-                if (cachedGBVoice) utterance.voice = cachedGBVoice;
-                speechSynthesis.cancel();
-                speechSynthesis.speak(utterance);
-            } catch(e) { showToast('发音失败，请换Chrome浏览器'); }
+            if (tryTTS(text)) return;
+            playOnlineAudio(text, 0.9);
         }
         function speakSentence(text) {
-            if (!window.speechSynthesis) return;
+            if (tryTTS(text)) return;
+            playOnlineAudio(text, 0.8);
+        }
+        function tryTTS(text) {
+            if (!window.speechSynthesis) return false;
             try {
-                var utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US';
-                utterance.rate = 0.8;
-                utterance.volume = 1;
-                loadVoices();
-                if (cachedGBVoice) utterance.voice = cachedGBVoice;
+                var voices = speechSynthesis.getVoices();
+                if (voices.length === 0) return false;
+                var u = new SpeechSynthesisUtterance(text);
+                u.lang = 'en-US'; u.rate = 0.9; u.volume = 1;
                 speechSynthesis.cancel();
-                speechSynthesis.speak(utterance);
+                speechSynthesis.speak(u);
+                return true;
+            } catch(e) { return false; }
+        }
+        function playOnlineAudio(text, rate) {
+            try {
+                var url = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=' + encodeURIComponent(text);
+                var audio = new Audio(url);
+                audio.playbackRate = rate;
+                audio.play().catch(function() {
+                    // 在线也失败，降级到本地 TTS 再试
+                    if (window.speechSynthesis) {
+                        var u2 = new SpeechSynthesisUtterance(text);
+                        u2.lang = 'en-US'; u2.rate = rate;
+                        speechSynthesis.cancel();
+                        speechSynthesis.speak(u2);
+                    }
+                });
             } catch(e) {}
         }
         window._speak = speakWord;
