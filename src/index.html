@@ -151,6 +151,7 @@
             <button class="nav-tab" data-tab="wordbook">生词本</button>
             <button class="nav-tab" data-tab="memory">记忆曲线</button>
             <button class="nav-tab" data-tab="grammar">语法</button>
+            <button class="nav-tab" data-tab="test">测试</button>
             <button class="nav-tab" data-tab="listen">听力</button>
             <button class="nav-tab" data-tab="vocab">词库</button>
         </div>
@@ -333,6 +334,42 @@
                     <div class="empty-state-icon">&#127919;</div>
                     <div class="empty-state-text">暂无到期词，先去学习页积累吧</div>
                 </div>
+            </div>
+        </section>
+
+        <!-- ===== 测试面板 ===== -->
+        <section id="test-panel" class="panel">
+            <!-- 词汇量测试 -->
+            <div class="card" id="vocabTestCard">
+                <div class="card-title">&#128202; 词汇量测试</div>
+                <div style="font-size:13px;color:#6B7280;margin-bottom:12px;">从词库随机抽 50 词，诚实选择认识/不认识，估算词汇量</div>
+                <div id="testArea">
+                    <button class="btn btn-primary btn-block" id="btnStartTest">开始测试</button>
+                </div>
+                <div id="testQuestion" style="display:none;">
+                    <div style="text-align:center;font-size:13px;color:#6B7280;margin-bottom:8px;" id="testProgress"></div>
+                    <div style="text-align:center;font-size:30px;font-weight:800;color:#1a237e;padding:16px;" id="testWord"></div>
+                    <div class="btn-group">
+                        <button class="btn btn-learn-unknown btn-block" id="btnTestNo">不认识</button>
+                        <button class="btn btn-success btn-block" id="btnTestYes">认识</button>
+                    </div>
+                </div>
+                <div id="testResult" style="display:none;text-align:center;padding:16px;"></div>
+            </div>
+            <!-- 今日回顾选择题 -->
+            <div class="card" id="todayReviewCard">
+                <div class="card-title">&#128218; 今日回顾</div>
+                <div style="font-size:13px;color:#6B7280;margin-bottom:12px;" id="todayReviewInfo">今天学了 0 词，抽几个测一测</div>
+                <div id="todayReviewArea">
+                    <button class="btn btn-primary btn-block" id="btnStartTodayReview">开始回顾</button>
+                </div>
+                <div id="todayReviewQuestion" style="display:none;">
+                    <div style="text-align:center;font-size:28px;font-weight:800;color:#1a237e;padding:12px;" id="todayReviewWord"></div>
+                    <div class="quiz-options" id="todayReviewOptions"></div>
+                    <div id="todayReviewFeedback" style="text-align:center;margin-top:10px;font-size:14px;"></div>
+                    <button class="btn btn-primary btn-block" id="btnTodayReviewNext" style="display:none;margin-top:10px;">下一题</button>
+                </div>
+                <div id="todayReviewResult" style="display:none;text-align:center;padding:16px;"></div>
             </div>
         </section>
 
@@ -3312,6 +3349,124 @@
 
         document.getElementById('btnListenNext').addEventListener('click', goNextListenQuiz);
 
+        // -- 词汇量测试 --
+        var testWords = [], testIdx = 0, testYes = 0;
+
+        function initTestPanel() {
+            document.getElementById('testArea').style.display = 'block';
+            document.getElementById('testQuestion').style.display = 'none';
+            document.getElementById('testResult').style.display = 'none';
+            // 今日回顾
+            var todayIds = Storage.getTodayLearnedIds();
+            document.getElementById('todayReviewInfo').textContent = '今天学了 ' + todayIds.length + ' 词，抽几个测一测';
+            document.getElementById('todayReviewArea').style.display = 'block';
+            document.getElementById('todayReviewQuestion').style.display = 'none';
+            document.getElementById('todayReviewResult').style.display = 'none';
+        }
+
+        document.getElementById('btnStartTest').addEventListener('click', function() {
+            var pool = WORDS.slice(); shuffle(pool);
+            testWords = pool.slice(0, 50);
+            testIdx = 0; testYes = 0;
+            document.getElementById('testArea').style.display = 'none';
+            document.getElementById('testQuestion').style.display = 'block';
+            document.getElementById('testResult').style.display = 'none';
+            showTestWord();
+        });
+
+        function showTestWord() {
+            if (testIdx >= testWords.length) {
+                showTestResult(); return;
+            }
+            document.getElementById('testProgress').textContent = (testIdx+1) + ' / ' + testWords.length;
+            document.getElementById('testWord').textContent = testWords[testIdx].word;
+        }
+
+        document.getElementById('btnTestYes').addEventListener('click', function() { testYes++; testIdx++; showTestWord(); });
+        document.getElementById('btnTestNo').addEventListener('click', function() { testIdx++; showTestWord(); });
+
+        function showTestResult() {
+            document.getElementById('testQuestion').style.display = 'none';
+            var res = document.getElementById('testResult');
+            res.style.display = 'block';
+            var rate = testYes / testWords.length;
+            var estimate = Math.round(rate * WORDS.length);
+            var level = estimate < 500 ? '初级' : estimate < 1000 ? '中级' : estimate < 2000 ? '中高级' : estimate < 3500 ? '高级' : '精通';
+            res.innerHTML = '<div style="font-size:40px;margin-bottom:4px;">' + estimate + '</div><div style="font-size:16px;color:#1a237e;font-weight:700;">估算词汇量</div><div style="font-size:13px;color:#6B7280;margin:8px 0;">正确率 ' + testYes + '/' + testWords.length + '（' + Math.round(rate*100) + '%） 等级：' + level + '</div><button class="btn btn-primary btn-block" id="btnRetryTest">重新测试</button>';
+            document.getElementById('btnRetryTest').addEventListener('click', function() {
+                document.getElementById('btnStartTest').click();
+            });
+        }
+
+        // -- 今日回顾选择题 --
+        var todayReviewWords = [], todayReviewIdx = 0, todayReviewCorrect = 0, todayReviewAnswered = false;
+
+        document.getElementById('btnStartTodayReview').addEventListener('click', function() {
+            var todayIds = Storage.getTodayLearnedIds();
+            if (todayIds.length === 0) { showToast('今天还没有学词'); return; }
+            var words = [];
+            todayIds.forEach(function(id) { var w = WORDS.find(function(x) { return x.id === id; }); if (w) words.push(w); });
+            if (words.length === 0) { showToast('今天还没有学词'); return; }
+            shuffle(words);
+            todayReviewWords = words.slice(0, Math.min(10, words.length));
+            todayReviewIdx = 0; todayReviewCorrect = 0; todayReviewAnswered = false;
+            document.getElementById('todayReviewArea').style.display = 'none';
+            document.getElementById('todayReviewQuestion').style.display = 'block';
+            document.getElementById('todayReviewResult').style.display = 'none';
+            showTodayReview();
+        });
+
+        function showTodayReview() {
+            if (todayReviewIdx >= todayReviewWords.length) {
+                showTodayReviewResult(); return;
+            }
+            todayReviewAnswered = false;
+            var w = todayReviewWords[todayReviewIdx];
+            document.getElementById('todayReviewWord').textContent = w.word;
+            document.getElementById('todayReviewFeedback').textContent = '';
+            document.getElementById('btnTodayReviewNext').style.display = 'none';
+            // 生成4个选项
+            var others = WORDS.filter(function(x) { return x.id !== w.id; }); shuffle(others);
+            var opts = [w].concat(others.slice(0, 3)); shuffle(opts);
+            var html = '';
+            opts.forEach(function(opt) {
+                html += '<button class="quiz-option tr-opt" data-id="' + opt.id + '">' + opt.meaning + '</button>';
+            });
+            document.getElementById('todayReviewOptions').innerHTML = html;
+            document.querySelectorAll('.tr-opt').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    if (todayReviewAnswered) return;
+                    todayReviewAnswered = true; todayReviewIdx++;
+                    document.querySelectorAll('.tr-opt').forEach(function(b) {
+                        if (b.getAttribute('data-id') === w.id) b.classList.add('correct');
+                        b.style.pointerEvents = 'none';
+                    });
+                    if (this.getAttribute('data-id') === w.id) {
+                        todayReviewCorrect++;
+                        document.getElementById('todayReviewFeedback').innerHTML = '<span style="color:#10B981;">&#10004; 正确</span>';
+                    } else {
+                        this.classList.add('wrong');
+                        document.getElementById('todayReviewFeedback').innerHTML = '<span style="color:#EF4444;">&#10008; 错误</span> 正确答案：<b style="color:#10B981;">' + w.meaning + '</b>';
+                    }
+                    document.getElementById('btnTodayReviewNext').style.display = 'flex';
+                });
+            });
+        }
+
+        function showTodayReviewResult() {
+            document.getElementById('todayReviewQuestion').style.display = 'none';
+            var res = document.getElementById('todayReviewResult');
+            res.style.display = 'block';
+            var total = todayReviewWords.length;
+            var pc = total > 0 ? Math.round(todayReviewCorrect/total*100) : 0;
+            res.innerHTML = '<div style="font-size:18px;font-weight:700;">回顾完成</div><div style="margin:8px 0;">正确 ' + todayReviewCorrect + ' / ' + total + '（' + pc + '%）</div><button class="btn btn-primary btn-block" id="btnRetryTR">再来一次</button>';
+            document.getElementById('btnRetryTR').addEventListener('click', function() {
+                document.getElementById('btnStartTodayReview').click();
+            });
+        }
+
+        document.getElementById('btnTodayReviewNext').addEventListener('click', showTodayReview);
+
         // -- 语法 --
         var grammarContent = document.getElementById('grammarContent');
 
@@ -3502,6 +3657,7 @@
             if (name === 'vocab') renderVocab();
             if (name === 'memory') renderMemoryPanel();
             if (name === 'listen') initListen();
+            if (name === 'test') initTestPanel();
         }
         tabs.forEach(function(t) {
             t.addEventListener('click', function() { switchTab(this.getAttribute('data-tab')); });
