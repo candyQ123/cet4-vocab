@@ -3350,13 +3350,13 @@
         document.getElementById('btnListenNext').addEventListener('click', goNextListenQuiz);
 
         // -- 词汇量测试 --
-        var testWords = [], testIdx = 0, testYes = 0;
+        var testTotal = 0, testYes = 0, testCurrentWord = null, testRunning = false;
 
         function initTestPanel() {
+            testRunning = false;
             document.getElementById('testArea').style.display = 'block';
             document.getElementById('testQuestion').style.display = 'none';
             document.getElementById('testResult').style.display = 'none';
-            // 今日回顾
             var todayIds = Storage.getTodayLearnedIds();
             document.getElementById('todayReviewInfo').textContent = '今天学了 ' + todayIds.length + ' 词，抽几个测一测';
             document.getElementById('todayReviewArea').style.display = 'block';
@@ -3365,34 +3365,64 @@
         }
 
         document.getElementById('btnStartTest').addEventListener('click', function() {
-            var pool = WORDS.slice(); shuffle(pool);
-            testWords = pool.slice(0, 50);
-            testIdx = 0; testYes = 0;
+            testTotal = 0; testYes = 0; testRunning = true;
             document.getElementById('testArea').style.display = 'none';
             document.getElementById('testQuestion').style.display = 'block';
             document.getElementById('testResult').style.display = 'none';
-            showTestWord();
+            pickTestWord();
         });
 
-        function showTestWord() {
-            if (testIdx >= testWords.length) {
-                showTestResult(); return;
-            }
-            document.getElementById('testProgress').textContent = (testIdx+1) + ' / ' + testWords.length;
-            document.getElementById('testWord').textContent = testWords[testIdx].word;
+        function pickTestWord() {
+            var pool = WORDS.slice(); shuffle(pool);
+            testCurrentWord = pool[0];
+            document.getElementById('testProgress').textContent = '已测 ' + testTotal + ' 词 | 认识 ' + testYes;
+            document.getElementById('testWord').textContent = testCurrentWord.word;
+            document.getElementById('testWord').onclick = function() { speakWord(testCurrentWord.word); };
+            document.getElementById('testWord').style.cursor = 'pointer';
+            document.getElementById('testWord').title = '点击听发音';
+            // 隐藏释义
+            var meaningEl = document.getElementById('testWordMeaning');
+            if (meaningEl) meaningEl.remove();
         }
 
-        document.getElementById('btnTestYes').addEventListener('click', function() { testYes++; testIdx++; showTestWord(); });
-        document.getElementById('btnTestNo').addEventListener('click', function() { testIdx++; showTestWord(); });
+        document.getElementById('btnTestYes').addEventListener('click', function() {
+            testYes++; testTotal++;
+            document.getElementById('testProgress').textContent = '已测 ' + testTotal + ' 词 | 认识 ' + testYes;
+            pickTestWord();
+        });
+        document.getElementById('btnTestNo').addEventListener('click', function() {
+            testTotal++;
+            // 显示不认识词的释义
+            var meaningEl = document.getElementById('testWordMeaning');
+            if (!meaningEl) {
+                meaningEl = document.createElement('div');
+                meaningEl.id = 'testWordMeaning';
+                meaningEl.style.cssText = 'text-align:center;font-size:18px;color:#1a237e;font-weight:600;padding:8px;background:#FFF3E0;border-radius:10px;margin-top:8px;';
+                document.getElementById('testQuestion').insertBefore(meaningEl, document.querySelector('#testQuestion .btn-group'));
+            }
+            meaningEl.textContent = testCurrentWord.meaning + (testCurrentWord.phonetic ? ' ' + testCurrentWord.phonetic : '');
+            document.getElementById('testProgress').textContent = '已测 ' + testTotal + ' 词 | 认识 ' + testYes;
+            // 1.5秒后下一词
+            setTimeout(function() { if (testRunning) { meaningEl.remove(); pickTestWord(); } }, 1800);
+        });
+
+        // 结束测试按钮
+        document.getElementById('testArea').insertAdjacentHTML('beforeend', '<button class="btn btn-outline btn-block" id="btnEndTest" style="margin-top:8px;">结束测试看结果</button>');
+        document.getElementById('btnEndTest').addEventListener('click', function() {
+            if (testTotal === 0 && !testRunning) { showToast('请先开始测试'); return; }
+            testRunning = false;
+            showTestResult();
+        });
 
         function showTestResult() {
             document.getElementById('testQuestion').style.display = 'none';
             var res = document.getElementById('testResult');
             res.style.display = 'block';
-            var rate = testYes / testWords.length;
+            if (testTotal === 0) { res.innerHTML = '<div style="color:#6B7280;">还没有测试数据</div>'; return; }
+            var rate = testYes / testTotal;
             var estimate = Math.round(rate * WORDS.length);
             var level = estimate < 500 ? '初级' : estimate < 1000 ? '中级' : estimate < 2000 ? '中高级' : estimate < 3500 ? '高级' : '精通';
-            res.innerHTML = '<div style="font-size:40px;margin-bottom:4px;">' + estimate + '</div><div style="font-size:16px;color:#1a237e;font-weight:700;">估算词汇量</div><div style="font-size:13px;color:#6B7280;margin:8px 0;">正确率 ' + testYes + '/' + testWords.length + '（' + Math.round(rate*100) + '%） 等级：' + level + '</div><button class="btn btn-primary btn-block" id="btnRetryTest">重新测试</button>';
+            res.innerHTML = '<div style="font-size:40px;margin-bottom:4px;">' + estimate + '</div><div style="font-size:16px;color:#1a237e;font-weight:700;">估算词汇量</div><div style="font-size:13px;color:#6B7280;margin:8px 0;">认识 ' + testYes + ' / ' + testTotal + '（' + Math.round(rate*100) + '%） 等级：' + level + '</div><button class="btn btn-primary btn-block" id="btnRetryTest">重新测试</button>';
             document.getElementById('btnRetryTest').addEventListener('click', function() {
                 document.getElementById('btnStartTest').click();
             });
